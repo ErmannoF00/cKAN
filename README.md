@@ -30,7 +30,7 @@
 ## 🗂 Project Structure (Planned)
 
 ```
-KANViewer/
+cKAN/
 ├── src/
 │   ├── main.cpp                # Entry point
 │   ├── gui/                    # Qt UI components
