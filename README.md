@@ -1,4 +1,6 @@
-# cKAN
+<h1 align="center">cKAN: Kolmogorov–Arnold Network Inference GUI </h1>
+
+
 
 **KAN Inference GUI** is an interactive C++ application that allows users to visualize and run inference on Kolmogorov–Arnold Networks (KANs). This tool integrates a CUDA-based inference engine, Qt-based GUI, and ONNX model support, making it ideal for exploring interpretable neural network architectures in real time.
 
