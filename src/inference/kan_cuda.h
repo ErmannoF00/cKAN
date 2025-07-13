@@ -2,14 +2,18 @@
 #define KAN_CUDA_H
 
 #ifdef __CUDACC__
+    __global__ void kan_forward_kernel(const float* input, float* output, int size);
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-__global__ void kan_forward_kernel(const float* input, float* output, int size);
+// Host function to launch the CUDA kernel
 void runKANForwardCUDA(const float* input, float* output, int size);
 
-#ifdef __CUDACC__
+#ifdef __cplusplus
 }
 #endif
 
-#endif // KAN_CUDA_H
+#endif 
