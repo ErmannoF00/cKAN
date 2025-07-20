@@ -1,19 +1,22 @@
 {
-    "name": "DummyKANModel",
-    "input_dim": 1,
-    "layers": [
-      {
-        "type": "KANLayer",
-        "W1": [[1.0]],
-        "phi": [
-          {
-            "type": "spline",
-            "knots": [-1.0, 0.0, 1.0],
-            "coefficients": [0.0, 0.0, 1.0]
-          }
-        ],
-        "W2": [[1.0]]
-      }
-    ]
-  }
-  
+  "name": "FlexibleKAN",
+  "input_dim": 2,
+  "layers": [
+    {
+      "W1": [[0.8, -0.2], [1.0, 0.5]],
+      "phi": [
+        {
+          "type": "spline",
+          "knots": [-1.0, 0.0, 1.0],
+          "coefficients": [0.0, 0.5, 1.0]
+        },
+        {
+          "type": "spline",
+          "knots": [-1.0, 0.0, 1.0],
+          "coefficients": [1.0, 0.5, 0.0]
+        }
+      ],
+      "W2": [[1.0, -0.5]]
+    }
+  ]
+}
