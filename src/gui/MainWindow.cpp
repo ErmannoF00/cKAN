@@ -1,62 +1,100 @@
 #include "MainWindow.h"
 #include <QString>
+#include <QLabel>
+#include <QSlider>
+#include <QPushButton>
+#include <QTableWidget>
+#include <QFormLayout>
+#include <QDoubleSpinBox>
+#include <QScrollArea>
+#include <QDebug>
 #include "model_loader.h"
 #include "inference/kan_engine.h"
-#include <QFile>
-#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), engine_(nullptr) {
-    setupUI();
+    setupUI();
 
-    try {
-        KANModel model = loadKANModelFromJSON("models/dummy_model.json");
-        engine_ = new KANEngine(model);
-    } catch (const std::exception& e) {
-        qDebug() << "Failed to load KAN model:" << e.what();
-    }
+    try {
+        KANModel model = loadKANModelFromJSON("models/dummy_model.json");
+        engine_ = new KANEngine(model);
+        setupDynamicInputs(model.input_dim);
+    } catch (const std::exception& e) {
+        qDebug() << "Failed to load KAN model:" << e.what();
+    }
 }
 
 MainWindow::~MainWindow() {
-    delete engine_;
+    delete engine_;
 }
 
 void MainWindow::setupUI() {
-    centralWidget = new QWidget(this);
-    layout = new QVBoxLayout(centralWidget);
+    centralWidget = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
-    inputLabel = new QLabel("Input Value: 0", this);
-    inputSlider = new QSlider(Qt::Horizontal, this);
-    inputSlider->setMinimum(-100);
-    inputSlider->setMaximum(100);
-    inputSlider->setValue(0);
+    // Model Info
+    modelInfoLabel = new QLabel("Model: Not loaded", this);
+    mainLayout->addWidget(modelInfoLabel);
 
-    outputLabel = new QLabel("Output: N/A", this);
+    // Input panel
+    inputLayout = new QFormLayout();
+    QWidget *inputWidget = new QWidget(this);
+    inputWidget->setLayout(inputLayout);
+    inputFields.clear();
+    mainLayout->addWidget(inputWidget);
 
-    layout->addWidget(inputLabel);
-    layout->addWidget(inputSlider);
-    layout->addWidget(outputLabel);
+    // Buttons
+    QPushButton *runButton = new QPushButton("Run Inference", this);
+    QPushButton *resetButton = new QPushButton("Reset", this);
+    connect(runButton, &QPushButton::clicked, this, &MainWindow::onRunInference);
+    connect(resetButton, &QPushButton::clicked, this, &MainWindow::onResetInputs);
 
-    setCentralWidget(centralWidget);
+    QHBoxLayout *buttonLayout = new QHBoxLayout();
+    buttonLayout->addWidget(runButton);
+    buttonLayout->addWidget(resetButton);
+    mainLayout->addLayout(buttonLayout);
 
-    connect(inputSlider, &QSlider::valueChanged, this, &MainWindow::onInputChanged);
+    // Output
+    outputTable = new QTableWidget(this);
+    outputTable->setColumnCount(2);
+    outputTable->setHorizontalHeaderLabels({"Index", "Value"});
+    outputTable->horizontalHeader()->setStretchLastSection(true);
+    mainLayout->addWidget(outputTable);
+
+    setCentralWidget(centralWidget);
 }
 
-void MainWindow::onInputChanged(int value) {
-    inputLabel->setText("Input Value: " + QString::number(value));
-    runKANInference(static_cast<float>(value) / 100.0f);
+void MainWindow::setupDynamicInputs(int inputDim) {
+    for (int i = 0; i < inputDim; ++i) {
+        QDoubleSpinBox *spin = new QDoubleSpinBox(this);
+        spin->setRange(-10.0, 10.0);
+        spin->setSingleStep(0.1);
+        spin->setValue(0.0);
+        inputFields.push_back(spin);
+        inputLayout->addRow("Input " + QString::number(i), spin);
+    }
+    modelInfoLabel->setText("Model loaded | Input Dim: " + QString::number(inputDim));
 }
 
-void MainWindow::runKANInference(float input) {
-    if (!engine_) {
-        outputLabel->setText("Error: KAN model not loaded.");
-        return;
-    }
+void MainWindow::onRunInference() {
+    if (!engine_) return;
 
-    std::vector<float> inputVec = { input };
-    std::vector<float> result = engine_->infer(inputVec);
-    if (!result.empty()) {
-        outputLabel->setText("Output: " + QString::number(result[0]));
-    } else {
-        outputLabel->setText("Output: (empty)");
-    }
+    std::vector<float> inputVec;
+    for (QDoubleSpinBox *spin : inputFields) {
+        inputVec.push_back(spin->value());
+    }
+
+    std::vector<float> output = engine_->infer(inputVec);
+    outputTable->setRowCount(output.size());
+    for (int i = 0; i < output.size(); ++i) {
+        outputTable->setItem(i, 0, new QTableWidgetItem(QString::number(i)));
+        outputTable->setItem(i, 1, new QTableWidgetItem(QString::number(output[i])));
+    }
+}
+
+void MainWindow::onResetInputs() {
+    for (QDoubleSpinBox *spin : inputFields) {
+        spin->setValue(0.0);
+    }
+    outputTable->clearContents();
+    outputTable->setRowCount(0);
 }
