@@ -1,0 +1,32 @@
+{
+  "dataset": "seed202 1024 uniform [-1,1]^2 training; seed701 256 held-out",
+  "target": "sin(pi*x0) + 0.4*x1^2 - 0.2*x0*x1",
+  "architecture": "piecewise-linear 2-4-1, 13 fixed uniform knots in [-2,2] per layer",
+  "steps": 650,
+  "lr": 0.016,
+  "trainable_params": 173,
+  "mlp_trainable_params": 173,
+  "kan_heldout_mse": 0.0003226219560019672,
+  "mlp_heldout_mse": 0.0001271495857508853,
+  "affine_heldout_mse": 0.23963142931461334,
+  "torch_version": "2.15.0+cu132",
+  "numpy_version": "2.5.4",
+  "python_version": "3.12.3 (main, Mar 23 2026, 19:04:32) [GCC 13.3.0]",
+  "host": "Linux-6.18.54.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+  "cpp_parity": {
+    "baseline": {
+      "max_abs_error": 4.3585896492004395e-07,
+      "mean_abs_error": 9.873292583506554e-08
+    },
+    "shared": {
+      "max_abs_error": 4.3585896492004395e-07,
+      "mean_abs_error": 9.873292583506554e-08
+    },
+    "packed": {
+      "max_abs_error": 4.3585896492004395e-07,
+      "mean_abs_error": 9.873292583506554e-08
+    }
+  },
+  "cpp_engines_bitwise_equal_on_256_samples": true,
+  "caveat": "Synthetic 2D function, not task-general model quality or hardware speedup."
+}

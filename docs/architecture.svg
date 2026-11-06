@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 770" role="img" aria-label="cKAN layer dataflow and three execution paths">
+<defs>
+ <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#42566c"/></marker>
+ <style>
+  .head{font:700 30px Arial,sans-serif;fill:#17324b}.sub{font:17px Arial,sans-serif;fill:#547089}
+  .label{font:700 18px Arial,sans-serif;fill:#123652}.note{font:15px Arial,sans-serif;fill:#456075}
+  .tiny{font:14px Arial,sans-serif;fill:#52657a}.conn{stroke:#42566c;stroke-width:3;fill:none;marker-end:url(#arr)}
+  .stage{stroke:#b5c6d2;stroke-width:2;rx:16;fill:#f6fafb}.data{stroke:#8bbdc0;fill:#e6f5f3}
+  .compute{stroke:#91a8d2;fill:#eaf0ff}.accent{stroke:#d0aa72;fill:#fff5e9}
+ </style>
+</defs>
+<rect width="1440" height="770" fill="white"/>
+<text x="60" y="61" class="head">cKAN — shared interval decode and output-contiguous spline execution</text>
+<text x="60" y="91" class="sub">CKAN 1 · piecewise-linear edge functions · float32 storage · double output accumulation · C++17 inference</text>
+<rect x="47" y="126" width="1344" height="365" fill="#f9fbfc" stroke="#e3e9ee" rx="18"/>
+<rect class="stage data" x="75" y="193" width="204" height="185" rx="16"/>
+<text class="label" x="101" y="232">Input x[i]</text>
+<text class="note" x="101" y="263">I scalar channels</text>
+<text class="tiny" x="101" y="296">Skip uses original x[i]</text>
+<text class="tiny" x="101" y="319">Spline input clamps</text>
+<text class="tiny" x="101" y="341">to [t0, tK-1]</text>
+<path class="conn" d="M 279 257 L 327 257"/>
+<rect class="stage compute" x="328" y="164" width="268" height="243" rx="16"/>
+<text class="label" x="353" y="203">Shared segment decode</text>
+<text class="note" x="353" y="235">k[i] = upper_bound(t, u[i]) − 1</text>
+<text class="note" x="353" y="267">a[i] = (u − t[k]) / Δt[k]</text>
+<text class="tiny" x="353" y="315">One search per input feature</text>
+<text class="tiny" x="353" y="339">Not one search per edge</text>
+<text class="tiny" x="353" y="363">Knots shared across outputs</text>
+<path class="conn" d="M 596 257 L 652 257"/>
+<rect class="stage accent" x="652" y="164" width="336" height="243" rx="16"/>
+<text class="label" x="676" y="203">Coefficient lookups</text>
+<text class="note" x="676" y="233">c[i, k[i], o] and c[i, k[i]+1, o]</text>
+<text class="note" x="676" y="263">s[i, o] in packed layout</text>
+<path d="M 676 288 H 954" stroke="#d0aa72" stroke-width="2"/>
+<text class="tiny" x="676" y="314">[input][knot][output] FP32</text>
+<text class="tiny" x="676" y="340">Output lanes contiguous</text>
+<text class="tiny" x="676" y="366">All edge coefficients still needed</text>
+<path class="conn" d="M 988 257 L 1044 257"/>
+<rect class="stage compute" x="1045" y="164" width="315" height="243" rx="16"/>
+<text class="label" x="1067" y="204">Output accumulation</text>
+<text class="note" x="1067" y="237">v = skip·x + (1−a)c0 + a·c1</text>
+<text class="note" x="1067" y="275">acc[o] += v ; for all i</text>
+<text class="tiny" x="1067" y="323">Double accumulation</text>
+<text class="tiny" x="1067" y="348">Float32 at layer boundary</text>
+<text class="tiny" x="1067" y="371">Feed next layer</text>
+<text class="label" x="79" y="458">No hidden activation, normalization, or softmax between layers</text>
+<text class="label" x="68" y="546">Ablation design</text>
+<rect class="stage" x="69" y="571" width="398" height="140" rx="14"/>
+<text class="label" x="90" y="608">A · Baseline</text>
+<text class="note" x="90" y="639">Binary search for every (input, output)</text>
+<text class="note" x="90" y="669">Canonical [output][input][knot]</text>
+<rect class="stage" x="519" y="571" width="398" height="140" rx="14"/>
+<text class="label" x="540" y="608">B · Shared decode</text>
+<text class="note" x="540" y="639">Decode once per input, broadcast</text>
+<text class="note" x="540" y="669">Canonical [output][input][knot]</text>
+<rect class="stage" x="969" y="571" width="398" height="140" rx="14"/>
+<text class="label" x="990" y="608">C · Shared + packed</text>
+<text class="note" x="990" y="639">Decode once + transposed coefficient copy</text>
+<text class="note" x="990" y="669">Extra model storage &amp; preparation cost</text>
+</svg>

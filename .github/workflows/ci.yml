@@ -1,0 +1,52 @@
+name: cKAN exactness and host execution
+on:
+  push:
+  pull_request:
+jobs:
+  cpp:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install original JSON parser headers
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - name: Build both KAN families
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j2
+          ctest --test-dir build --output-on-failure
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - run: pip install -r requirements.txt
+      - run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j2
+          python3 tools/train.py --steps 650 --infer build/kan_infer
+  sanitized:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y libboost-dev
+      - run: |
+          cmake -S . -B build-sanitized -DCMAKE_BUILD_TYPE=Debug -DKAN_SANITIZE=ON
+          cmake --build build-sanitized -j2
+          ctest --test-dir build-sanitized --output-on-failure
+  gui-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y qt6-base-dev libboost-dev
+      - run: |
+          cmake -S . -B build/gui -DKAN_BUILD_GUI=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/gui -j2

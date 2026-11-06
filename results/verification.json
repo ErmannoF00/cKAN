@@ -1,0 +1,49 @@
+{
+  "status": "validated independently in preparation container, not in user WSL Git clone",
+  "date": "2026-11-06",
+  "tests": {
+    "GCC_CTest": "3/3 passed",
+    "Clang_CTest": "3/3 passed",
+    "GCC_ASan_UBSan_CTest": "3/3 passed",
+    "Python_training_and_heldout": "PASS, 256 test vectors, three independent C++ CLIs"
+  },
+  "numeric": {
+    "max_abs_ref_diff": 4.4517219066619873e-07,
+    "cpp_engines_exact": true,
+    "kan_heldout_mse": 0.00032154045766219497,
+    "mlp_heldout_mse": 0.00010626423318171874
+  },
+  "host_cpu": "",
+  "measurements": {
+    "8x8_K16": {
+      "baseline_ns": 360.645833,
+      "shared_ns": 116.010417,
+      "packed_ns": 94.203125,
+      "packed_speedup": 3.8283850243821527
+    },
+    "32x32_K16": {
+      "baseline_ns": 6088.057292,
+      "shared_ns": 1890.291667,
+      "packed_ns": 839.385417,
+      "packed_speedup": 7.252993879449303
+    },
+    "128x128_K16": {
+      "baseline_ns": 97973.619792,
+      "shared_ns": 62326.010417,
+      "packed_ns": 15271.348958,
+      "packed_speedup": 6.415518371130918
+    },
+    "trained_2_4_1_batch256": {
+      "baseline_ns": 87.044922,
+      "packed_ns": 60.504232,
+      "packed_speedup": 1.4386584065722874
+    }
+  },
+  "limitations": [
+    "Qt6 GUI not compiled",
+    "no physical hardware or device-level CIM",
+    "no GPU kernel",
+    "measurements host-specific",
+    "prior cKAN Git checkout not available"
+  ]
+}

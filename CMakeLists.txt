@@ -1,20 +1,88 @@
 cmake_minimum_required(VERSION 3.16)
-project(KANViewer LANGUAGES C CXX CUDA)
-
+project(cKAN VERSION 2.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Fetch nlohmann/json automatically
-include(FetchContent)
-FetchContent_Declare(
-  nlohmann_json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.12.0
-)
-FetchContent_MakeAvailable(nlohmann_json)
+option(KAN_BUILD_GUI "Build the original Qt6 GUI, repaired and dual-model enabled" OFF)
+option(KAN_BUILD_LEGACY_JSON "Enable original JSON model loader if Boost.PropertyTree is available" ON)
+option(KAN_SANITIZE "Use address and undefined-behavior sanitizers" OFF)
 
-# Find Qt
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+if(KAN_SANITIZE)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(FATAL_ERROR "Sanitizers require GCC or Clang")
+  endif()
+  add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g)
+  add_link_options(-fsanitize=address,undefined)
+endif()
 
-# Add source directories
-add_subdirectory(src)
+add_library(kan_core src/model.cpp)
+target_include_directories(kan_core PUBLIC "${PROJECT_SOURCE_DIR}/include")
+add_library(kan_legacy src/inference/kan_engine.cpp)
+target_include_directories(kan_legacy PUBLIC
+    "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/models")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  foreach(t kan_core kan_legacy)
+    target_compile_options(${t} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+  endforeach()
+endif()
+
+set(KAN_LEGACY_JSON_AVAILABLE OFF)
+if(KAN_BUILD_LEGACY_JSON)
+  find_path(KAN_BOOST_INCLUDE_DIR boost/property_tree/json_parser.hpp)
+  if(KAN_BOOST_INCLUDE_DIR)
+    add_library(kan_legacy_json models/model_loader.cpp)
+    target_include_directories(kan_legacy_json PRIVATE "${KAN_BOOST_INCLUDE_DIR}")
+    target_link_libraries(kan_legacy_json PUBLIC kan_legacy)
+    set(KAN_LEGACY_JSON_AVAILABLE ON)
+    message(STATUS "Legacy JSON loader enabled (Boost.PropertyTree headers found)")
+  else()
+    message(WARNING "Boost headers absent: legacy JSON loading disabled; install libboost-dev")
+  endif()
+endif()
+
+add_executable(kan_infer src/cli_main.cpp)
+target_link_libraries(kan_infer PRIVATE kan_core)
+add_executable(kan_bench tools/benchmark.cpp)
+target_link_libraries(kan_bench PRIVATE kan_core)
+add_executable(kan_tests tests/test_model.cpp)
+target_link_libraries(kan_tests PRIVATE kan_core)
+target_compile_definitions(kan_tests PRIVATE KAN_PROJECT_ROOT="${PROJECT_SOURCE_DIR}")
+
+add_executable(kan_legacy_tests tests/test_legacy.cpp)
+target_link_libraries(kan_legacy_tests PRIVATE kan_legacy)
+if(KAN_LEGACY_JSON_AVAILABLE)
+  add_executable(kan_legacy_json_tests tests/test_legacy_json.cpp)
+  target_link_libraries(kan_legacy_json_tests PRIVATE kan_legacy_json)
+  target_compile_definitions(kan_legacy_json_tests PRIVATE KAN_PROJECT_ROOT="${PROJECT_SOURCE_DIR}")
+  add_executable(kan_legacy_infer src/legacy_main.cpp)
+  target_link_libraries(kan_legacy_infer PRIVATE kan_legacy_json)
+endif()
+
+enable_testing()
+add_test(NAME spline_numeric_io COMMAND kan_tests)
+add_test(NAME legacy_network_numeric COMMAND kan_legacy_tests)
+add_test(NAME spline_cli_smoke COMMAND kan_infer --model "${PROJECT_SOURCE_DIR}/models/example.kan" --input "0.4,-0.2" --engine packed)
+if(KAN_LEGACY_JSON_AVAILABLE)
+  add_test(NAME legacy_json_parity COMMAND kan_legacy_json_tests)
+  add_test(NAME legacy_json_cli_smoke COMMAND kan_legacy_infer --model "${PROJECT_SOURCE_DIR}/models/dummy_model.json" --input "0.4,-0.2")
+endif()
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+  add_test(NAME csv_cli_contract COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_cli.py"
+       --binary "$<TARGET_FILE:kan_infer>" --model "${PROJECT_SOURCE_DIR}/models/example.kan")
+endif()
+
+if(KAN_BUILD_GUI)
+  find_package(Qt6 REQUIRED COMPONENTS Widgets)
+  set(CMAKE_AUTOMOC ON)
+  add_executable(KANViewer src/main.cpp src/gui/MainWindow.cpp src/gui/MainWindow.h)
+  target_include_directories(KANViewer PRIVATE "${PROJECT_SOURCE_DIR}/src")
+  target_link_libraries(KANViewer PRIVATE kan_core kan_legacy Qt6::Widgets)
+  if(KAN_LEGACY_JSON_AVAILABLE)
+    target_compile_definitions(KANViewer PRIVATE CKAN_HAS_JSON=1)
+    target_link_libraries(KANViewer PRIVATE kan_legacy_json)
+  endif()
+  # Never compile src/inference/kan_cuda.cu: original prototype squares inputs.
+endif()
